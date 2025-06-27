@@ -1,0 +1,42 @@
+{
+  "name": "kibo-notifications",
+  "version": "1.0.0",
+  "description": "Servicio de notificaciones para WhatsApp y Email",
+  "main": "dist/server.js",
+  "repository": "https://github.com/kibo-project/kibo-notifications.git",
+  "author": "@agarciadv6 <andypandaag@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nodemon src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "vercel-build": "tsc",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "nodemailer": "^7.0.3",
+    "resend": "^4.6.0",
+    "twilio": "^5.7.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^24.0.3",
+    "@types/nodemailer": "^6.4.17",
+    "@types/uuid": "^10.0.0",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

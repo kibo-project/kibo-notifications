@@ -1,0 +1,35 @@
+# Dependencias
+node_modules/
+
+# Compilados
+dist/
+build/
+*.log
+
+# Entornos
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs y herramientas
+.idea/
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Vercel config local
+.vercel/
+
+# Archivos yarn
+yarn.lock
+
+# Archivos opcionales, puedes quitar si deseas versionar:
+tsconfig.json
+vercel.json
