@@ -2,6 +2,83 @@ import { Request, Response, NextFunction } from 'express';
 import { NotificationRequest } from '../types/notification';
 import { logger } from '../utils/logger';
 
+export const validateEmailRequest = (req: Request, res: Response, next: NextFunction): void => {
+  try {
+    const { to, subject, message, html, variables } = req.body;
+
+    // Validar campos requeridos
+    if (!to || !subject || (!message && !html)) {
+      res.status(400).json({
+        success: false,
+        error: 'Faltan campos requeridos: to, subject y (message o html)'
+      });
+      return;
+    }
+
+    // Validar tipos de datos
+    if (typeof to !== 'string' || typeof subject !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'to y subject deben ser strings'
+      });
+      return;
+    }
+
+    if (message && typeof message !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'message debe ser string'
+      });
+      return;
+    }
+
+    if (html && typeof html !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: 'html debe ser string'
+      });
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(to)) {
+      res.status(400).json({
+        success: false,
+        error: 'Formato de email inválido'
+      });
+      return;
+    }
+
+    // Validar longitud del subject
+    if (subject.length > 200) {
+      res.status(400).json({
+        success: false,
+        error: 'Subject no puede exceder 200 caracteres'
+      });
+      return;
+    }
+
+    // Validar variables si existen
+    if (variables && typeof variables !== 'object') {
+      res.status(400).json({
+        success: false,
+        error: 'variables debe ser un objeto'
+      });
+      return;
+    }
+
+    // Si llegamos aquí, la validación fue exitosa
+    next();
+  } catch (error) {
+    logger.error('Error en validación de email', { error });
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor'
+    });
+  }
+};
+
 export const validateNotificationRequest = (
   req: Request,
   res: Response,
