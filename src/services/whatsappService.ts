@@ -17,23 +17,25 @@ class WhatsAppService {
         process.env.TWILIO_AUTH_TOKEN
       );
       this.fromNumber = process.env.TWILIO_WHATSAPP_FROM || null;
-      logger.info('Twilio WhatsApp inicializado correctamente');
+      logger.info('Twilio WhatsApp initialized successfully');
     } else {
-      logger.warn('Credenciales de Twilio no encontradas');
+      logger.error('Twilio credentials not found');
     }
   }
 
   async sendWhatsApp(options: WhatsAppOptions) {
     if (!this.client || !this.fromNumber) {
-      throw new Error('Twilio WhatsApp no está configurado');
+      throw new Error('Twilio WhatsApp is not configured properly');
     }
 
-    const { to, message, templateId, variables } = options;
+    const { to, message, variables } = options;
 
-    // Formatear el número de teléfono
-    const formattedTo = this.formatPhoneNumber(to);
+    const phoneValidation = this.validatePhoneNumber(to);
+    if (!phoneValidation.isValid) {
+      throw new Error(`Invalid phone number: ${phoneValidation.error}`);
+    }
 
-    // Formatear el mensaje con variables si existen
+    const formattedTo = phoneValidation.formatted!;
     const formattedMessage = this.formatMessage(message, variables);
 
     try {
@@ -43,24 +45,59 @@ class WhatsAppService {
         body: formattedMessage,
       });
 
+      logger.info('WhatsApp sent successfully', {
+        messageId: result.sid,
+        to: formattedTo,
+        status: result.status
+      });
+
       return {
         success: true,
         messageId: result.sid,
-        provider: 'twilio'
+        provider: 'twilio',
+        status: result.status,
+        to: formattedTo
       };
+
     } catch (error: any) {
-      logger.error('Error enviando WhatsApp con Twilio', { error: error.message });
-      throw new Error(`Error de Twilio: ${error.message}`);
+      logger.error('Error sending WhatsApp', {
+        error: error.message,
+        code: error.code,
+        status: error.status,
+        to: formattedTo
+      });
+
+      const errorMessage = this.handleTwilioError(error, formattedTo);
+      throw new Error(errorMessage);
+    }
+  }
+
+  private handleTwilioError(error: any, phoneNumber: string): string {
+    switch (error.code) {
+      case 21211:
+        return `Invalid phone number: ${phoneNumber}`;
+      case 21408:
+        return 'Insufficient permissions to send WhatsApp messages';
+      case 63016:
+        return `Number not registered in WhatsApp sandbox: ${phoneNumber}. You need to register the number first by sending "join <code>" to +1 415 523 8886`;
+      case 21606:
+        return 'Origin number is not verified for WhatsApp';
+      default:
+        return `Twilio error (${error.code}): ${error.message}`;
     }
   }
 
   private formatPhoneNumber(phone: string): string {
-    // Limpiar el número de teléfono
     let cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
 
-    // Agregar código de país si no lo tiene
     if (!cleanPhone.startsWith('+')) {
-      cleanPhone = '+' + cleanPhone;
+      if (cleanPhone.startsWith('591')) {
+        cleanPhone = '+' + cleanPhone;
+      } else if (cleanPhone.length === 8) {
+        cleanPhone = '+591' + cleanPhone;
+      } else {
+        cleanPhone = '+' + cleanPhone;
+      }
     }
 
     return cleanPhone;
@@ -81,9 +118,41 @@ class WhatsAppService {
     return formattedMessage;
   }
 
+  validatePhoneNumber(phone: string): { isValid: boolean; formatted?: string; error?: string } {
+    try {
+      const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
+
+      if (cleanPhone.length < 8) {
+        return {
+          isValid: false,
+          error: 'Number too short'
+        };
+      }
+
+      const formatted = this.formatPhoneNumber(cleanPhone);
+
+      if (!/^\+\d{10,15}$/.test(formatted)) {
+        return {
+          isValid: false,
+          error: 'Invalid format'
+        };
+      }
+
+      return {
+        isValid: true,
+        formatted
+      };
+    } catch (error: any) {
+      return {
+        isValid: false,
+        error: error.message
+      };
+    }
+  }
+
   async getMessageStatus(messageId: string) {
     if (!this.client) {
-      throw new Error('Twilio WhatsApp no está configurado');
+      throw new Error('Twilio WhatsApp is not configured');
     }
 
     try {
@@ -102,38 +171,11 @@ class WhatsAppService {
         errorMessage: message.errorMessage
       };
     } catch (error: any) {
-      logger.error('Error obteniendo status del mensaje', { error: error.message, messageId });
-      throw new Error(`Error obteniendo status: ${error.message}`);
+      logger.error('Error getting message status', { error: error.message, messageId });
+      throw new Error(`Error getting status: ${error.message}`);
     }
   }
 
-  validatePhoneNumber(phone: string): { isValid: boolean; formatted?: string; error?: string } {
-    try {
-      const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-      const phoneRegex = /^[\+]?[1-9]\d{1,14}$/;
-
-      if (!phoneRegex.test(cleanPhone)) {
-        return {
-          isValid: false,
-          error: 'Formato de número de teléfono inválido'
-        };
-      }
-
-      const formatted = this.formatPhoneNumber(cleanPhone);
-
-      return {
-        isValid: true,
-        formatted
-      };
-    } catch (error: any) {
-      return {
-        isValid: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Método para verificar si el servicio está disponible
   isAvailable(): boolean {
     return !!(this.client && this.fromNumber);
   }

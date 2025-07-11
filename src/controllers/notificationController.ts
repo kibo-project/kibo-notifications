@@ -22,7 +22,7 @@ export class NotificationController {
         priority = 'normal'
       }: NotificationRequest = req.body;
 
-      logger.info('Procesando notificación', {
+      logger.info('Processing notification', {
         requestId,
         type,
         recipient: type === 'email' ? recipient : '***masked***',
@@ -31,7 +31,6 @@ export class NotificationController {
 
       const results: NotificationResponse['results'] = {};
 
-      // Enviar Email
       if (type === 'email' || type === 'both') {
         try {
           const emailResult = await emailService.sendEmail({
@@ -47,7 +46,7 @@ export class NotificationController {
             messageId: emailResult.messageId
           };
         } catch (error: any) {
-          logger.error('Error enviando email', { requestId, error: error.message });
+          logger.error('Error sending email', { requestId, error: error.message });
           results.email = {
             success: false,
             error: error.message
@@ -55,7 +54,6 @@ export class NotificationController {
         }
       }
 
-      // Enviar WhatsApp
       if (type === 'whatsapp' || type === 'both') {
         try {
           const whatsappResult = await whatsappService.sendWhatsApp({
@@ -70,7 +68,7 @@ export class NotificationController {
             messageId: whatsappResult.messageId
           };
         } catch (error: any) {
-          logger.error('Error enviando WhatsApp', { requestId, error: error.message });
+          logger.error('Error sending WhatsApp', { requestId, error: error.message });
           results.whatsapp = {
             success: false,
             error: error.message
@@ -78,7 +76,6 @@ export class NotificationController {
         }
       }
 
-      // Verificar si al menos un envío fue exitoso
       const hasSuccess = Object.values(results).some(result => result.success);
       const processingTime = Date.now() - startTime;
 
@@ -89,7 +86,7 @@ export class NotificationController {
         requestId
       };
 
-      logger.info('Notificación procesada', {
+      logger.info('Notification processed', {
         requestId,
         success: hasSuccess,
         processingTime: `${processingTime}ms`,
@@ -103,7 +100,7 @@ export class NotificationController {
 
     } catch (error: any) {
       const processingTime = Date.now() - startTime;
-      logger.error('Error procesando notificación', {
+      logger.error('Error processing notification', {
         requestId,
         error: error.message,
         processingTime: `${processingTime}ms`
@@ -114,7 +111,7 @@ export class NotificationController {
         results: {},
         timestamp: new Date().toISOString(),
         requestId,
-        error: 'Error interno del servidor'
+        error: 'Internal server error'
       });
     }
   }
@@ -133,11 +130,10 @@ export class NotificationController {
         version: process.env.npm_package_version || '1.0.0'
       };
 
-      logger.debug('Health check solicitado', health);
       res.json(health);
 
     } catch (error: any) {
-      logger.error('Error en health check', { error: error.message });
+      logger.error('Error in health check', { error: error.message });
       res.status(500).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
@@ -160,13 +156,13 @@ export class NotificationController {
       } else {
         res.status(400).json({
           success: false,
-          error: 'Provider no soportado para consulta de status',
+          error: 'Provider not supported for status check',
           timestamp: new Date().toISOString()
         });
       }
 
     } catch (error: any) {
-      logger.error('Error obteniendo status del mensaje', {
+      logger.error('Error getting message status', {
         messageId: req.params.messageId,
         error: error.message
       });
@@ -186,7 +182,7 @@ export class NotificationController {
       if (!phone) {
         res.status(400).json({
           success: false,
-          error: 'Número de teléfono requerido',
+          error: 'Phone number required',
           timestamp: new Date().toISOString()
         });
         return;
@@ -201,7 +197,7 @@ export class NotificationController {
       });
 
     } catch (error: any) {
-      logger.error('Error validando teléfono', { error: error.message });
+      logger.error('Error validating phone', { error: error.message });
       res.status(500).json({
         success: false,
         error: error.message,
