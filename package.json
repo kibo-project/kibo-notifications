@@ -4,14 +4,14 @@
   "description": "Servicio de notificaciones para WhatsApp y Email",
   "main": "dist/server.js",
   "repository": "https://github.com/kibo-project/kibo-notifications.git",
-  "author": "@agarciadv6 <andypandaag@gmail.com>",
+  "author": "@agarciadv6",
   "license": "MIT",
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "echo \"No tests yet\" && exit 0",
-    "vercel-build": "tsc",
+    "vercel-build": "npm run build",
     "clean": "rm -rf dist"
   },
   "dependencies": {

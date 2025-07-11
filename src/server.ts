@@ -9,6 +9,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Middleware
 app.use(helmet());
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
@@ -21,6 +22,21 @@ app.use(express.urlencoded({ extended: true }));
 
 app.set('trust proxy', true);
 
+// Logger setup
+let logger: any;
+try {
+  const loggerModule = require('./utils/logger');
+  logger = loggerModule.logger;
+} catch (error) {
+  console.error('Error loading logger:', error);
+  logger = {
+    info: console.log,
+    error: console.error,
+    warn: console.warn
+  };
+}
+
+// Routes
 try {
   const notificationRoutes = require('./routes/notificationRoutes');
   app.use('/api/notifications', notificationRoutes.default || notificationRoutes);
@@ -28,6 +44,7 @@ try {
   console.error('Error loading routes:', error);
 }
 
+// Health endpoints
 app.get('/', (req, res) => {
   res.json({
     name: 'Kibo Notifications Service',
@@ -45,6 +62,7 @@ app.get('/health', (req, res) => {
   });
 });
 
+// 404 handler
 app.use((req, res, next) => {
   res.status(404).json({
     success: false,
@@ -53,19 +71,7 @@ app.use((req, res, next) => {
   });
 });
 
-let logger: any;
-try {
-  const loggerModule = require('./utils/logger');
-  logger = loggerModule.logger;
-} catch (error) {
-  console.error('Error loading logger:', error);
-  logger = {
-    info: console.log,
-    error: console.error,
-    warn: console.warn
-  };
-}
-
+// Error handler
 app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   logger.error('Unhandled error', {
     error: error.message,
@@ -81,19 +87,22 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server started successfully on port ${PORT}`);
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server started successfully on port ${PORT}`);
 
-  logger.info(`Server started on port ${PORT}`);
-  logger.info('Email providers:', {
-    resend: !!process.env.RESEND_API_KEY,
-    gmail: !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD)
+    logger.info(`Server started on port ${PORT}`);
+    logger.info('Email providers:', {
+      resend: !!process.env.RESEND_API_KEY,
+      gmail: !!(process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD)
+    });
+    logger.info('WhatsApp provider:', {
+      twilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
+    });
   });
-  logger.info('WhatsApp provider:', {
-    twilio: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
-  });
-});
+}
 
+// Graceful shutdown handlers
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down server...');
   logger.info('SIGTERM received, shutting down server...');
